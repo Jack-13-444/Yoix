@@ -20,8 +20,9 @@ target_make_iso()
 	make -C kernel clean
     make -C kernel
     # Create a directory which will be our ISO root.
+	
     mkdir -p target/
-
+	
     # Copy the relevant files over.
     mkdir -p target/boot
 	cp -v kernel/bin/kernel target/boot/

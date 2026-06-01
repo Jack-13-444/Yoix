@@ -26,23 +26,24 @@ void memory_map(struct limine_memmap_response *MMap, uint64_t order,struct block
 	
 }
 
-void init_buddy(struct limine_memmap_response *MMap, struct Buddy *Buddy, struct block *blocks)
+void init_buddy(struct limine_memmap_response *MMap)
 {
     // init the buddy system
-    Buddy->Current_Order  		=	11;
-	memory_map(MMap, Buddy->Current_Order, blocks);
+    buddy->Current_Order  		=	11;
+	memory_map(MMap, buddy->Current_Order, blocks);
+
 	for (size_t i = 0; i < 12; i++)
 	{
-		Buddy->free_list[i].next = &Buddy->free_list[i];
-		Buddy->free_list[i].prev = &Buddy->free_list[i];
+		buddy->free_list[i].next = &buddy->free_list[i];
+		buddy->free_list[i].prev = &buddy->free_list[i];
 		
 	}
 
-	Buddy->free_list[11].next = &blocks[0].node;
-	Buddy->free_list[11].prev = &blocks[0].node;
-	blocks[0].node.next = &Buddy->free_list[11];
-	blocks[0].node.prev = &Buddy->free_list[11];
-	
+	buddy->free_list[11].next = &blocks[0].node;
+	buddy->free_list[11].prev = &blocks[0].node;
+	blocks[0].node.next = &buddy->free_list[11];
+	blocks[0].node.prev = &buddy->free_list[11];
+
 }
 void split(struct Buddy *Buddy, struct block *Block, uint64_t order)
 {
@@ -112,6 +113,8 @@ void merge(uint64_t *Block, uint64_t order)
 
 void* kmalloc(size_t size)
 {
+	if (!buddy) return NULL;
+	
 	uint64_t order = 63 - __builtin_clzll(size);
 	if (size > (1ULL << order)) order++;
 	if (buddy->free_list[order].next != &buddy->free_list[order])
@@ -145,5 +148,16 @@ void* kmalloc(size_t size)
 }
 void* kfree(void *ptr)
 {
+	for (size_t i = 0; i < 2048; i++)
+	{
+		if (blocks[i].address == (uint64_t)ptr)
+		{
+			blocks[i].IsFree = true;
+		    uint64_t order = __builtin_ctzll(blocks[i].size);
 
+			merge(&blocks[i].address, order);
+			return NULL;
+		}
+								
+	}
 }

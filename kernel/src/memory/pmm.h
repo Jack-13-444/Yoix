@@ -31,7 +31,7 @@ struct block
 };
 void memory_map(struct limine_memmap_response *MMap, uint64_t order ,struct block *blocks);
 
-void init_buddy(struct limine_memmap_response *MMap, struct Buddy *Buddy, struct block *blocks);
+void init_buddy(struct limine_memmap_response *MMap);
 void split(struct Buddy *Buddy, struct block *block, uint64_t order);
 void* kmalloc(size_t size);
 void* kfree(void *ptr);
