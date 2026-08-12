@@ -1,10 +1,24 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+
 #include <boot/limine.h>
 #include <memory/gdt.h>
-#include "memory/pmm.h"
+#include <memory/buddy.h>
+#include <memory/vmm.h>
+#include <memory/heap.h>
+#include <system/interrupt/idt.h>
+#include <system/interrupt/APIC/apic.h>
+#include <system/interrupt/PIC/pic.h>
+#include <system/cpu/msr.h>
 
+#define KASSERT(cond) do { \
+    if (!(cond)) { \
+        for (;;) { \
+            asm volatile("cli; hlt"); \
+        } \
+    } \
+} while (0)
 // Set the base revision to 6, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
 // See specification for further info.
@@ -22,10 +36,20 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST_ID,
     .revision = 0
 };
+
+__attribute__((used, section(".limine_requests")))
 static volatile struct limine_memmap_request memmap_request = {
     .id = LIMINE_MEMMAP_REQUEST_ID,
     .revision = 0
 };
+__attribute__((used, section(".limine_requests")))
+volatile struct limine_hhdm_request hhdm_request = {
+    .id = LIMINE_HHDM_REQUEST_ID,
+    .revision = 0
+};
+
+
+
 
 // Finally, define the start and end markers for the Limine requests.
 // These can also be moved anywhere, to any .c file, as seen fit.
@@ -100,6 +124,11 @@ static void hcf(void) {
     }
 }
 
+static inline void trigger_gp(void) {
+    uint16_t bad_selector = 0xFFFF; 
+    __asm__ volatile ("mov %0, %%ds" : : "r"(bad_selector));
+}
+
 // The following will be our kernel's entry point.
 // If renaming kmain() to something else, make sure to change the
 // linker script accordingly.
@@ -114,6 +143,13 @@ void kmain(void) {
      || framebuffer_request.response->framebuffer_count < 1) {
         hcf();
     }
+    if (memmap_request.response == NULL) {
+        hcf();
+    }
+    if (hhdm_request.response == NULL)
+    {
+       hcf();
+    }
     
 
     // Fetch the first framebuffer.
@@ -121,8 +157,6 @@ void kmain(void) {
 
     // Print a nice pattern to screen as an example.
     // Note: we assume the framebuffer model is RGB with 32-bit pixels.
-
-    
     volatile uint32_t *fb_ptr = framebuffer->address;
     for (size_t y = 0; y < framebuffer->height; y++) {
         for (size_t x = 0; x < framebuffer->width; x++) {
@@ -131,12 +165,54 @@ void kmain(void) {
             fb_ptr[y * (framebuffer->pitch / 4) + x] = (nY << 8) | nX;
         }
     }
+    
     initGdt();
-    init_buddy(memmap_request.response);
+    idt_init();
+    buddy_init(memmap_request.response);
+    heap_init();
+    disable_apic();   
+    enable_apic();
 
-    int *ptr = (int*)kmalloc(16);
-    *ptr = 999;
+    // void *small_ptr = kmalloc(16);
+    // KASSERT(small_ptr != NULL);
+    // uint32_t *small_data = (uint32_t *)small_ptr;
+    // small_data[0] = 0xDEADBEEF;
+    // KASSERT(small_data[0] == 0xDEADBEEF);
+
+    // void *large_ptr = kmalloc(5000);
+    // KASSERT(large_ptr != NULL);
+    // uint8_t *large_data = (uint8_t *)large_ptr;
+    // large_data[0] = 0xAA;
+    // large_data[4095] = 0x55;
+    // KASSERT(large_data[0] == 0xAA);
+    // KASSERT(large_data[4095] == 0x55);
+
+    // kfree(small_ptr);
+    // kfree(large_ptr);
+
+    // void *reuse_ptr = kmalloc(16);
+    // KASSERT(reuse_ptr != NULL);
+    // kfree(reuse_ptr);
+
+    // uintptr_t a = buddy_alloc_page();
+    // KASSERT(a != BUDDY_INVALID_ADDRESS);
+
+    // uintptr_t b = buddy_alloc_pages(4);
+    // KASSERT(b != BUDDY_INVALID_ADDRESS);
+
+    // buddy_free_page(a);
+    // uintptr_t c = buddy_alloc_page();
+    // KASSERT(c == a);   
+
+    // buddy_free_page(c);
+    // buddy_free_pages(b, 4);
+    // uintptr_t phys = buddy_alloc_page();
+    // uintptr_t virt = 0xffff900000000000; 
+    // bool ok = vmm_map(virt, phys, PAGE_PRESENT | PAGE_WRITABLE);
+    // uint64_t result = vmm_get_phys(virt + 0x50);
+    // bool unmap_ok = vmm_unmap(virt);
 
     // We're done, just hang...
+
     hcf();
 }

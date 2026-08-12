@@ -23,6 +23,7 @@ void encodeTSSEntry(GDT_TSS_t* source, uint64_t base, uint64_t limit, uint8_t ac
 	source->baseTss = (base >> 32) & 0xFFFFFFFF;
 	source->Reserved = 0;
 }
+
 void initGdt()
 {
 	encodeGDTEntry(&gdt.entry[0],0,0,0,0);

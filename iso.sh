@@ -17,8 +17,7 @@ hdd()
 }
 target_make_iso() 
 {
-	make -C kernel clean
-    make -C kernel
+
     # Create a directory which will be our ISO root.
 	
     mkdir -p target/
