@@ -8,6 +8,7 @@
 #define BUDDY_PAGE_STATE_FREE_BODY 0xFD
 #define BUDDY_PAGE_STATE_ALLOCATED 0xFE
 #define BUDDY_PAGE_STATE_RESERVED 0xFF
+#define UNSPLITTABLE_SIZE 4096
 
 /* Per-page state table for the allocator. Each entry is either an order
  * value for the start of a free block, FREE_BODY for continuation pages, or
@@ -148,7 +149,7 @@ static uint32_t buddy_pop_free_block(uint8_t order) {
 
 static void buddy_add_range(uint32_t frame, uint32_t pages) {
     /* Split the range into aligned buddy blocks and add each free block. */
-    while (pages > 0) {
+    while (pages > 0 ) {
         uint8_t order = BUDDY_MAX_ORDER;
 
         while ((1U << order) > pages || (frame & ((1U << order) - 1)) != 0) {
@@ -176,6 +177,11 @@ static uint32_t buddy_allocate_block(uint8_t order) {
         while (current_order > order) {
             current_order--;
             uint32_t buddy_frame = frame + (1U << current_order);
+            if (((1U << order) * BUDDY_PAGE_SIZE) < UNSPLITTABLE_SIZE)
+            {
+                return BUDDY_INVALID_ADDRESS;
+            }
+            
             buddy_add_free_block(buddy_frame, current_order);
         }
 
