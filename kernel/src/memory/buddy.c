@@ -163,10 +163,15 @@ static void buddy_add_range(uint32_t frame, uint32_t pages) {
     }
 }
 
-static uint32_t buddy_allocate_block(uint8_t order) {
+static uint32_t buddy_allocate_block(uint8_t order ) {
     /* Find or split a free block to satisfy an allocation of the requested
      * order.
      */
+    if (((1U << order) * BUDDY_PAGE_SIZE) < UNSPLITTABLE_SIZE || order > BUDDY_MAX_ORDER)
+    {
+            return BUDDY_INVALID_ADDRESS;
+    }
+        
     for (uint8_t current_order = order; current_order <= BUDDY_MAX_ORDER; current_order++) {
         if (buddy_free_list[current_order] == UINT32_MAX) {
             continue;
@@ -177,11 +182,7 @@ static uint32_t buddy_allocate_block(uint8_t order) {
         while (current_order > order) {
             current_order--;
             uint32_t buddy_frame = frame + (1U << current_order);
-            if (((1U << order) * BUDDY_PAGE_SIZE) < UNSPLITTABLE_SIZE)
-            {
-                return BUDDY_INVALID_ADDRESS;
-            }
-            
+
             buddy_add_free_block(buddy_frame, current_order);
         }
 
