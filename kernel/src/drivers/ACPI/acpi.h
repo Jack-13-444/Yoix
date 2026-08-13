@@ -116,3 +116,6 @@ struct FADT
     GenericAddressStructure X_GPE0Block;
     GenericAddressStructure X_GPE1Block;
 };
+
+bool doChecksum(ACPISDTHeader *tableHeader);
+void *findFACP(void *RootSDT);
