@@ -143,7 +143,7 @@ void kmain(void) {
      || framebuffer_request.response->framebuffer_count < 1) {
         hcf();
     }
-    if (memmap_request.response == NULL || memmap_request.response ->entry_count< 1 || memmap_request.response->entries == NULL ) {
+    if (memmap_request.response == NULL || memmap_request.response ->entry_count == 0 || memmap_request.response->entries == NULL ) {
         hcf();
     }
     if (hhdm_request.response == NULL)

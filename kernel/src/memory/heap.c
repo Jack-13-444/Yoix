@@ -14,6 +14,17 @@ extern volatile struct limine_hhdm_request hhdm_request;
 #define HEAP_MAX_SMALL_SIZE 2048U
 #define HEAP_CACHE_CLASS_COUNT 9
 
+static void *memset(void *s, int c, size_t n) {
+    uint8_t *p = s;
+
+    for (size_t i = 0; i < n; i++) {
+        p[i] = (uint8_t)c;
+    }
+
+    return s;
+}
+
+
 static const size_t heap_cache_sizes[HEAP_CACHE_CLASS_COUNT] = {
     8U, 16U, 32U, 64U, 128U, 256U, 512U, 1024U, 2048U
 };
@@ -26,6 +37,8 @@ typedef struct heap_slab_page {
     uint16_t reserved;
     uintptr_t free_list;
     uintptr_t next;
+    uint64_t bitmap[256];
+
 } heap_slab_page_t;
 
 typedef struct heap_cache {
@@ -55,6 +68,18 @@ static inline uintptr_t heap_virt_to_phy(void *virt) {
 
     return (uintptr_t)virt - hhdm_request.response->offset;
 }
+static uint64_t Get_Bit(int64_t index)
+{
+    return index % 64 ;
+}
+static uint64_t Get_offset(int64_t index)
+{
+    return (uint64_t)1 << Get_Bit(index);
+}
+static uint64_t Get_array(int64_t index)
+{
+    return index / 64;
+}
 
 static int heap_cache_index(size_t size) {
     size_t rounded = size;
@@ -71,6 +96,19 @@ static int heap_cache_index(size_t size) {
 
     return -1;
 }
+static int64_t object_index(uintptr_t ptr, uintptr_t virt_page, heap_slab_page_t* page)
+{
+    uint64_t object_buffer = virt_page + sizeof(heap_slab_page_t); 
+    if(ptr < object_buffer) return -1;
+     
+    uint64_t offset = (uint64_t)(ptr - object_buffer);
+    if ((offset % page->object_size) == 0) return -1;
+
+    uint64_t end = offset / page->object_size;
+    if (end >= page->total_objects  ) return -1;
+    return end;
+}
+
 
 static void heap_remove_slab_from_cache(heap_cache_t *cache, uintptr_t slab_phys) {
     uintptr_t prev = 0;
@@ -130,6 +168,7 @@ static uintptr_t heap_alloc_slab_page(uint16_t object_size) {
     page->free_count = page->total_objects;
     page->reserved = 0;
     page->next = 0;
+    memset(page->bitmap, 0, sizeof(page->bitmap));
 
     uint8_t *object_buffer = page_virt + sizeof(heap_slab_page_t);
     page->free_list = (uintptr_t)object_buffer;
@@ -158,13 +197,20 @@ static void *heap_alloc_from_cache(heap_cache_t *cache) {
 
     uintptr_t slab_phys = cache->partial_pages;
     heap_slab_page_t *page = (heap_slab_page_t *)heap_phy_to_virt(slab_phys);
-    if (page == NULL || page->free_list == 0) {
-        return NULL;
-    }
+    if (page == NULL || page->free_list == 0) return NULL;
+
 
     void *object = (void *)page->free_list;
+    int64_t obj_index = object_index((uintptr_t)object, (uintptr_t)page, page); // (uintptr_t) is page_virt
+    if (obj_index == -1) return NULL;
+
+    uint64_t obj_masked =  Get_offset(obj_index);
+    page->bitmap[Get_array(obj_index)] |= obj_masked;
+
     page->free_list = *(uintptr_t *)object;
     page->free_count--;
+
+    
 
     if (page->free_count == 0) {
         heap_remove_slab_from_cache(cache, slab_phys);
@@ -173,7 +219,7 @@ static void *heap_alloc_from_cache(heap_cache_t *cache) {
     return object;
 }
 
-static void heap_free_large(void *ptr, heap_large_header_t *header, uintptr_t page_phys) {
+static void heap_free_large( heap_large_header_t *header, uintptr_t page_phys) {
     if (header->magic != HEAP_MAGIC_LARGE) {
         return;
     }
@@ -182,20 +228,37 @@ static void heap_free_large(void *ptr, heap_large_header_t *header, uintptr_t pa
 }
 
 static void heap_free_small(void *ptr, heap_slab_page_t *page, uintptr_t page_phys) {
-    if (page->magic != HEAP_MAGIC_SMALL) {
+    if (page->magic != HEAP_MAGIC_SMALL)
+    {
+        return;
+    }
+    uintptr_t page_virt = (uintptr_t)heap_phy_to_virt(page_phys);
+    int64_t obj_index  = object_index((uintptr_t)ptr, page_virt, page);
+    if (obj_index == -1)
+    {
+        return;
+    }
+    
+    uint64_t obj_masked = Get_offset(obj_index);
+    int index = heap_cache_index(page->object_size);
+
+    if ((page->bitmap[Get_array(obj_index)] & obj_masked) == 0)
+    {
         return;
     }
 
-    int index = heap_cache_index(page->object_size);
     if (index < 0) {
         return;
     }
 
+    
     heap_cache_t *cache = &heap_caches[index];
     uintptr_t object = (uintptr_t)ptr;
     *(uintptr_t *)object = page->free_list;
     page->free_list = object;
     page->free_count++;
+    page->bitmap[Get_array(obj_index)] &= ~obj_masked; 
+
 
     if (page->free_count == page->total_objects) {
         heap_remove_slab_from_cache(cache, page_phys);
@@ -266,7 +329,7 @@ void kfree(void *ptr) {
 
     heap_large_header_t *large_header = (heap_large_header_t *)page_start;
     if (large_header->magic == HEAP_MAGIC_LARGE) {
-        heap_free_large(ptr, large_header, page_phys);
+        heap_free_large(large_header, page_phys);
     }
 }
 
