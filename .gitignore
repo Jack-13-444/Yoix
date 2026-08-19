@@ -29,3 +29,4 @@ kernel/bin/
 kernel/obj/
 iso/
 target/
+.vscode/
