@@ -39,22 +39,6 @@ uint32_t FindEntries(void* madt_header, uint32_t type, void** array, uint32_t ma
 }
 
 
-void write_ioapic_register(const uintptr_t apic_base, const uint8_t offset, const uint32_t val) 
-{
-    /* tell IOREGSEL where we want to write to */
-    *(volatile uint32_t*)(apic_base) = offset;
-    /* write the value to IOWIN */
-    *(volatile uint32_t*)(apic_base + 0x10) = val; 
-}
-
-
-uint32_t read_ioapic_register(const uintptr_t apic_base, const uint8_t offset)
-{
-    /* tell IOREGSEL where we want to read from */
-    *(volatile uint32_t*)(apic_base) = offset;
-    /* return the data from IOWIN */
-    return *(volatile uint32_t*)(apic_base + 0x10);
-}
 void init_IOAPIC(void* madt_header)
 {
     void* ioapic_ptr[16];
@@ -122,10 +106,11 @@ uint8_t OffsetUpper(uint8_t pin)
 {
     return (0x10 + (pin * 2)+1);
 }
-uint8_t Get_pin(struct IOAPIC* ioapic_entry, struct IOAPIC_ISO *iso_entry)
+uint8_t Get_pin(struct IOAPIC* ioapic_entry, uint8_t irq)
 {
-    return (iso_entry->GSI - ioapic_entry->GSI_base);
+    return (Get_iso_gsi(irq) - ioapic_entry->GSI_base);
 }
+
 uint8_t Get_APICID()
 {
     uint8_t lapic_id = read_lapic_register(g_virt_apic, 0x20);
@@ -141,9 +126,9 @@ void writeRedir(union RedirectionEntry *Redir, uint8_t vector, uint8_t delv_mode
     Redir->Mask              = mask;
     Redir->destination       = dest;
 }
-void loadRedir(union RedirectionEntry *Redir, struct IOAPIC* ioapic_entry, struct IOAPIC_ISO*iso_entry)
+void loadRedir(union RedirectionEntry *Redir, struct IOAPIC* ioapic_entry, uint8_t irq)
 {
-    uint8_t pin = Get_pin(ioapic_entry, iso_entry);
+    uint8_t pin = Get_pin(ioapic_entry, irq);
     ioapic_write(OffsetLower(pin),Redir->lowerDword,0);
     ioapic_write(OffsetUpper(pin),Redir->upperDword,0);
 }
