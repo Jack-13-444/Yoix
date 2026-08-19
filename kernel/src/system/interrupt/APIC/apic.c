@@ -8,7 +8,7 @@
 #define IA32_APIC_BASE_MSR 0x1B
 #define IA32_APIC_BASE_MSR_BSP 0x100 // Processor is a BSP
 #define IA32_APIC_BASE_MSR_ENABLE 0x800
-
+uintptr_t g_virt_apic;  
 /** returns a 'true' value if the CPU supports APIC
  *  and if the local APIC hasn't been disabled in MSRs
  *  note that this requires CPUID to be supported.
@@ -51,10 +51,10 @@ void enable_apic() {
     // /* Set the Spurious Interrupt Vector Register bit 8 to start receiving interrupts */
 
     uintptr_t apic_phys = cpu_get_apic_base();
-    uintptr_t apic_virt = (uintptr_t)phy_to_virt(apic_phys);
-    vmm_map(apic_virt, apic_phys, PAGE_PRESENT | PAGE_WRITABLE | PAGE_PCD);   
+    g_virt_apic = (uintptr_t)phy_to_virt(apic_phys);
+    vmm_map(g_virt_apic, apic_phys, PAGE_PRESENT | PAGE_WRITABLE | PAGE_PCD);   
 
-    uint32_t *svr = (uint32_t*)((uint8_t*)apic_virt + 0xF0);
+    uint32_t *svr = (uint32_t*)((uint8_t*)g_virt_apic + 0xF0);
     *svr = 0x100 | 255;
 }
 void disable_apic() {
@@ -65,4 +65,16 @@ void disable_apic() {
     uint32_t *svr = (uint32_t*)((uint8_t*)apic_virt + 0xF0);
     *svr &= ~0x100;
 
+}
+void write_lapic_register(uintptr_t lapic_base, uint32_t offset, uint32_t val)
+{
+    *(volatile uint32_t*)(lapic_base + offset) = val;
+}
+uint32_t read_lapic_register(uintptr_t lapic_base, uint32_t offset)
+{
+   return *(volatile uint32_t*)(lapic_base + offset);
+}
+void APIC_EOI()
+{
+   write_lapic_register(g_virt_apic, 0xB0, 0);   
 }

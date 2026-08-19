@@ -16,7 +16,6 @@
 #define PAGE_PCD (1ULL << 4) 
 #define PAGE_PWT (1ULL << 3)
 
-
 uint64_t *phy_to_virt(uint64_t phys);
 
 

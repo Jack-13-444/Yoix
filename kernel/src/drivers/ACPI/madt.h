@@ -1,10 +1,11 @@
 #include <stdint.h>
 #include <drivers/ACPI/acpi.h>
+#ifndef _MADT_H
+#define _MADT_H
 
 struct MADT_t
 {
     struct ACPISDTHeader h;
-
     uint32_t Local_APIC_Address;
     uint32_t Flags;
 }__attribute__ ((packed));
@@ -26,7 +27,7 @@ struct IOAPIC
     uint8_t     IOAPIC_ID;
     uint8_t     Reserved;
     uint32_t    IOAPIC_Address;
-    uint32_t    GSIB; // Global System Interrupt Base   
+    uint32_t    GSI_base; // Global System Interrupt Base   
 
 }__attribute__((packed));
 
@@ -46,7 +47,7 @@ struct IOAPIC_NMI // Non-maskable interrupt source
     uint8_t     Record_Length;
     uint8_t     NMI_Source;
     uint8_t     Reserved;
-    uint16_t     Flags;
+    uint16_t    Flags;
     uint32_t    GSI; // Global System Interrupt for Non-maskable interrupt source
 }__attribute__((packed));
 
@@ -77,3 +78,4 @@ struct LAPIC_X2 // : Processor Local x2APIC
     uint32_t    FLAGS           ;
     uint32_t    ACPI_ID         ;
 }__attribute__((packed));
+#endif

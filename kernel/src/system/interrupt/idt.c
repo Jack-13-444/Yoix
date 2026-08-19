@@ -4,6 +4,7 @@
 #include <memory/buddy.h>
 #include <memory/heap.h>
 #include <memory/vmm.h>
+#include <system/interrupt/APIC/apic.h>
 
 __attribute__((aligned(0x10))) 
 static idt_entry_t idt[256]; // Create an array of IDT entries; aligned for performance
@@ -14,9 +15,59 @@ static bool vectors[256];
 extern void* isr_stub_table[];
 
 
-void interrupt_handler(Registers *Reg) {
-        
-    __asm__ volatile ("cli; hlt"); // Completely hangs the computer
+static const char* const g_Exceptions[] = {
+    "Divide by zero error",
+    "Debug",
+    "Non-maskable Interrupt",
+    "Breakpoint",
+    "Overflow",
+    "Bound Range Exceeded",
+    "Invalid Opcode",
+    "Device Not Available",
+    "Double Fault",
+    "Coprocessor Segment Overrun",
+    "Invalid TSS",
+    "Segment Not Present",
+    "Stack-Segment Fault",
+    "General Protection Fault",
+    "Page Fault",
+    "Reserved",
+    "x87 Floating-Point Exception",
+    "Alignment Check",
+    "Machine Check",
+    "SIMD Floating-Point Exception",
+    "Virtualization Exception",
+    "Control Protection Exception ",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Hypervisor Injection Exception",
+    "VMM Communication Exception",
+    "Security Exception",
+    "Reserved"
+};
+
+
+void interrupt_handler(Registers *Reg)
+{
+    if (Reg->vectors > 31 && Reg->vectors < 48)
+    {
+        irq_handler(Reg);
+        APIC_EOI();        
+    }
+    if (Reg->vectors < 32)
+    { // not have more of handling for expections
+        __asm__ volatile ("cli; hlt"); // Completely hangs the computer
+    }
+
+    return;
+}
+void irq_handler(Registers *Reg)
+{
+    
 }
 
 

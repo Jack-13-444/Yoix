@@ -1,5 +1,33 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
+
+
+#ifndef _ACPI_H
+#define _ACPI_H
+
+// structure for revision 0 (version 1.0)
+struct RSDP_t {
+ char Signature[8];
+ uint8_t Checksum;
+ char OEMID[6];
+ uint8_t Revision;
+ uint32_t RsdtAddress;
+} __attribute__ ((packed));
+
+// structure for revision 2 (version 2.0+)
+struct XSDP_t {
+ char Signature[8];
+ uint8_t Checksum;
+ char OEMID[6];
+ uint8_t Revision;
+ uint32_t RsdtAddress;      // deprecated since version 2.0
+
+ uint32_t Length;
+ uint64_t XsdtAddress;
+ uint8_t ExtendedChecksum;
+ uint8_t reserved[3];
+} __attribute__ ((packed));
 
 struct ACPISDTHeader {
   char Signature[4];
@@ -18,6 +46,10 @@ struct XSDT {
   uint64_t PointerToOtherSDT[];
 }__attribute__ ((packed));
 
+struct RSDT {
+  struct ACPISDTHeader header;
+  uint32_t entries[];
+} __attribute__ ((packed));
 
 
 struct BGRT_t
@@ -47,7 +79,7 @@ struct GenericAddressStructure
   uint8_t BitOffset;
   uint8_t AccessSize;
   uint64_t Address;
-};
+}__attribute__((packed));
 
 struct FADT
 {
@@ -98,7 +130,7 @@ struct FADT
     uint32_t Flags;
 
     // 12 byte structure; see below for details
-    GenericAddressStructure ResetReg;
+    struct GenericAddressStructure ResetReg;
 
     uint8_t  ResetValue;
     uint8_t  Reserved3[3];
@@ -107,15 +139,18 @@ struct FADT
     uint64_t                X_FirmwareControl;
     uint64_t                X_Dsdt;
 
-    GenericAddressStructure X_PM1aEventBlock;
-    GenericAddressStructure X_PM1bEventBlock;
-    GenericAddressStructure X_PM1aControlBlock;
-    GenericAddressStructure X_PM1bControlBlock;
-    GenericAddressStructure X_PM2ControlBlock;
-    GenericAddressStructure X_PMTimerBlock;
-    GenericAddressStructure X_GPE0Block;
-    GenericAddressStructure X_GPE1Block;
-};
+    struct GenericAddressStructure X_PM1aEventBlock;
+    struct GenericAddressStructure X_PM1bEventBlock;
+    struct GenericAddressStructure X_PM1aControlBlock;
+    struct GenericAddressStructure X_PM1bControlBlock;
+    struct GenericAddressStructure X_PM2ControlBlock;
+    struct GenericAddressStructure X_PMTimerBlock;
+    struct GenericAddressStructure X_GPE0Block;
+    struct GenericAddressStructure X_GPE1Block;
+}__attribute__((packed));
 
-bool doChecksum(ACPISDTHeader *tableHeader);
-void *findFACP(void *RootSDT);
+bool doChecksum(struct ACPISDTHeader *tableHeader);
+void *findTable(void *phy_address, const char *Table_Sign);
+int strncmp(const char* s1, const char* s2, size_t n);
+
+#endif 

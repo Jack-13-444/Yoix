@@ -11,6 +11,9 @@
 #include <system/interrupt/APIC/apic.h>
 #include <system/interrupt/PIC/pic.h>
 #include <system/cpu/msr.h>
+#include <drivers/ACPI/acpi.h>
+#include <drivers/interrupt/APIC/ioapic.h>
+#include <drivers/ACPI/madt.h>
 
 #define KASSERT(cond) do { \
     if (!(cond)) { \
@@ -46,6 +49,12 @@ __attribute__((used, section(".limine_requests")))
 volatile struct limine_hhdm_request hhdm_request = {
     .id = LIMINE_HHDM_REQUEST_ID,
     .revision = 0
+};
+__attribute__((used, section(".limine_requests")))
+volatile struct limine_rsdp_request RSDP_request = 
+{
+    .id = LIMINE_RSDP_REQUEST_ID,
+    .revision = 2
 };
 
 
@@ -150,6 +159,10 @@ void kmain(void) {
     {
        hcf();
     }
+    if (RSDP_request.response == NULL)
+    {
+        hcf();
+    }
     
 
     // Fetch the first framebuffer.
@@ -170,9 +183,11 @@ void kmain(void) {
     idt_init();
     buddy_init(memmap_request.response);
     heap_init();
-    disable_apic();   
     enable_apic();
 
+    void* RSDP_ADDRESS = RSDP_request.response->address;
+    void*  MADT_Header = findTable(RSDP_ADDRESS, "APIC");  
+    init_IOAPIC(MADT_Header);
     // void *small_ptr = kmalloc(16);
     // KASSERT(small_ptr != NULL);
     // uint32_t *small_data = (uint32_t *)small_ptr;
@@ -205,7 +220,7 @@ void kmain(void) {
     // KASSERT(c == a);   
 
     // buddy_free_page(c);
-    // buddy_free_pages(b, 4);
+    // // buddy_free_pages(b, 4);
     // uintptr_t phys = buddy_alloc_page();
     // uintptr_t virt = 0xffff900000000000; 
     // bool ok = vmm_map(virt, phys, PAGE_PRESENT | PAGE_WRITABLE);

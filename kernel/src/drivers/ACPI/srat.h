@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include <drivers/ACPI/acpi.h>
+#ifndef _SRAT_H
+#define _SRAT_H
 
 struct SRAT
 {
@@ -44,3 +46,4 @@ struct SRAT_proc_lapic2_struct
     uint32_t _CDM;        // The clock domain which the processor belongs to (more jargon)
     uint8_t reserved2[4]; // Reserved.
 } __attribute__((packed));
+#endif 

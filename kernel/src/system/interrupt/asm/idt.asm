@@ -121,23 +121,23 @@ isr_no_err_stub 29
 isr_err_stub    30
 isr_no_err_stub 31
 
-isr_Reserved_stub 32 ; i don't have a irq yet
-isr_Reserved_stub 33
-isr_Reserved_stub 34
-isr_Reserved_stub 35
-isr_Reserved_stub 36
-isr_Reserved_stub 37
-isr_Reserved_stub 38
-isr_Reserved_stub 39
-isr_Reserved_stub 40
-isr_Reserved_stub 41
-isr_Reserved_stub 42
-isr_Reserved_stub 43
+isr_no_err_stub 32 ; for timer
+isr_no_err_stub 33
+isr_no_err_stub 34
+isr_no_err_stub 35
+isr_no_err_stub 36
+isr_no_err_stub 37
+isr_no_err_stub 38
+isr_no_err_stub 39
+isr_no_err_stub 40
+isr_no_err_stub 41
+isr_no_err_stub 42
+isr_no_err_stub 43
 
-isr_Reserved_stub 44
-isr_Reserved_stub 45
-isr_Reserved_stub 46
-isr_Reserved_stub 47
+isr_no_err_stub 44
+isr_no_err_stub 45
+isr_no_err_stub 46
+isr_no_err_stub 47
 isr_Reserved_stub 48
 isr_Reserved_stub 49
 isr_Reserved_stub 50

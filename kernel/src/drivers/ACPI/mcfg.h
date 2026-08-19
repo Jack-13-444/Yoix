@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include <drivers/ACPI/acpi.h>
+#ifndef _MCFG_H
+#define _MCFG_H
 
 struct MCFG_Entry
 {
@@ -16,3 +18,4 @@ struct MCFG
     uint64_t Reserved1;
     struct MCFG_Entry entries[] ;
 }__attribute__((packed));
+#endif 
