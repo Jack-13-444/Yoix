@@ -63,7 +63,7 @@ isr_common:
     
     call interrupt_handler
 
-    pop rax
+    pop rax ; ds
 
     mov ds, ax ; restore old segments
     mov es, ax
@@ -81,6 +81,7 @@ isr_common:
     pop rdi
     pop rsi
     pop rdx
+    pop rcx
     pop rbx
     pop rax
 

@@ -14,7 +14,7 @@
 #include <drivers/ACPI/acpi.h>
 #include <drivers/interrupt/APIC/ioapic.h>
 #include <drivers/ACPI/madt.h>
-
+#include <system/interrupt/irq/pit.h>
 #define KASSERT(cond) do { \
     if (!(cond)) { \
         for (;;) { \
@@ -133,10 +133,7 @@ static void hcf(void) {
     }
 }
 
-static inline void trigger_gp(void) {
-    uint16_t bad_selector = 0xFFFF; 
-    __asm__ volatile ("mov %0, %%ds" : : "r"(bad_selector));
-}
+
 
 // The following will be our kernel's entry point.
 // If renaming kmain() to something else, make sure to change the

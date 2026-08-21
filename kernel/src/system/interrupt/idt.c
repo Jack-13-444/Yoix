@@ -13,7 +13,7 @@ static idtr_t idtr;
 static bool vectors[256];
 
 extern void* isr_stub_table[];
-
+extern volatile uint64_t tick;
 
 static const char* const g_Exceptions[] = {
     "Divide by zero error",
@@ -66,8 +66,17 @@ void interrupt_handler(Registers *Reg)
     return;
 }
 void irq_handler(Registers *Reg)
-{
+{    
+    switch (Reg->vectors)
+    {
+    case 0x20:
+        tick++;
+        break;
     
+    default:
+        break;
+    }
+    return ;
 }
 
 
@@ -88,7 +97,7 @@ void idt_init() {
     idtr.base = (uintptr_t)&idt[0];
     idtr.limit = (uint16_t)sizeof(idt_entry_t) * 256 - 1;
 
-    for (uint8_t vector = 0; vector < 32; vector++) {
+    for (uint8_t vector = 0; vector < 49; vector++) {
         idt_set_descriptor(vector, isr_stub_table[vector], 0x8E);
         vectors[vector] = true;
     }

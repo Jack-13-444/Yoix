@@ -35,7 +35,6 @@ uint32_t read_ioapic_register(const uintptr_t apic_base, const uint8_t offset);
 void init_IOAPIC(void* madt_header);
 uint32_t ioapic_read(unsigned char regOff, uint8_t index);
 void ioapic_write(unsigned char regOff, uint32_t data, uint8_t index);
-void test();
 
 
 #endif
